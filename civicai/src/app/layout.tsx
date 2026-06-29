@@ -18,6 +18,25 @@ export default function RootLayout({
       lang="en"
       className="h-full antialiased"
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme') || 'dark';
+                  document.documentElement.setAttribute('data-theme', theme);
+                  if (theme === 'light') {
+                    document.documentElement.classList.add('light');
+                  } else {
+                    document.documentElement.classList.remove('light');
+                  }
+                } catch (e) {}
+              })();
+            `
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-[#030303]">
         <ClientLayout>{children}</ClientLayout>
       </body>

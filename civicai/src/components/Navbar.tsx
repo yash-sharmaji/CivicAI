@@ -2,19 +2,54 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Shield, Bell, Menu, X, CheckSquare } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Shield, Bell, Menu, X, LogOut, Sun, Moon, ChevronDown, User, Settings } from 'lucide-react';
 import { Button } from './ui/Button';
-import { getStoredNotifications, getStoredUser } from '@/lib/mockData';
+import { getStoredNotifications, getStoredUser, logoutUser, UserStats } from '@/lib/mockData';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [avatar, setAvatar] = useState('https://api.dicebear.com/7.x/avataaars/svg?seed=Jane');
+  const [user, setUser] = useState<UserStats | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   // Check if we are inside dashboard or app pages (vs landing/auth)
   const isAppView = pathname !== '/' && pathname !== '/login' && pathname !== '/signup';
+
+  useEffect(() => {
+    // Read theme on mount
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else {
+      setTheme('dark');
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    document.documentElement.setAttribute('data-theme', nextTheme);
+    if (nextTheme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await logoutUser();
+      router.push('/login');
+    } catch (err) {
+      console.warn('Sign out failed:', err);
+    }
+  };
 
   useEffect(() => {
     // Check notifications
@@ -33,8 +68,11 @@ export const Navbar: React.FC = () => {
     if (isAppView) {
       getStoredUser()
         .then((usr) => {
-          if (usr?.avatar) {
-            setAvatar(usr.avatar);
+          if (usr) {
+            setUser(usr);
+            if (usr.avatar) {
+              setAvatar(usr.avatar);
+            }
           }
         })
         .catch((err) => console.warn('Failed to fetch user in Navbar:', err.message));
@@ -81,6 +119,15 @@ export const Navbar: React.FC = () => {
 
           {/* Right Action buttons */}
           <div className="flex items-center gap-4">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              className="p-2 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all cursor-pointer"
+            >
+              {theme === 'dark' ? <Sun className="w-4.5 h-4.5" /> : <Moon className="w-4.5 h-4.5" />}
+            </button>
+
             {isAppView && (
               <Link href="/notifications" className="relative p-2 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all">
                 <Bell className="w-4 h-4" />
@@ -102,17 +149,74 @@ export const Navbar: React.FC = () => {
                 </Link>
               </div>
             ) : (
-              <Link href="/profile" className="hidden md:block">
-                <div className="h-9 w-9 rounded-full overflow-hidden border border-white/10 hover:border-indigo-500 transition-colors">
-                  <img src={avatar} alt="Profile" className="w-full h-full" />
-                </div>
-              </Link>
+              <div className="relative hidden md:block">
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-1.5 focus:outline-none cursor-pointer"
+                >
+                  <div className="h-9 w-9 rounded-full overflow-hidden border border-white/10 hover:border-indigo-500 transition-colors">
+                    <img src={avatar} alt="Profile" className="w-full h-full" />
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+
+                {isDropdownOpen && (
+                  <>
+                    {/* Click outside overlay */}
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={() => setIsDropdownOpen(false)} 
+                    />
+                    
+                    {/* Dropdown Menu */}
+                    <div className="absolute right-0 mt-2 w-52 rounded-xl bg-[#0b0b0e] border border-white/10 py-2 shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      {user && (
+                        <div className="px-4 py-2 border-b border-white/5">
+                          <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                          <p className="text-[10px] text-gray-400 truncate">{user.rank}</p>
+                        </div>
+                      )}
+                      
+                      <Link 
+                        href="/profile" 
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        My Profile
+                      </Link>
+                      
+                      <Link 
+                        href="/settings" 
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-4 py-2 text-xs text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+                      >
+                        <Settings className="w-3.5 h-3.5" />
+                        Settings
+                      </Link>
+                      
+                      <div className="border-t border-white/5 my-1" />
+                      
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          handleSignOut();
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors text-left cursor-pointer"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
 
             {/* Mobile Hamburger Menu Toggle */}
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="p-2 md:hidden rounded-lg bg-white/5 text-gray-400 hover:text-white"
+              className="p-2 md:hidden rounded-lg bg-white/5 text-gray-400 hover:text-white cursor-pointer"
             >
               {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -146,6 +250,18 @@ export const Navbar: React.FC = () => {
               <Link href="/notifications" onClick={() => setIsOpen(false)} className="block py-2 text-sm text-gray-400 hover:text-white">Notifications</Link>
               <Link href="/profile" onClick={() => setIsOpen(false)} className="block py-2 text-sm text-gray-400 hover:text-white">My Profile</Link>
               <Link href="/admin" onClick={() => setIsOpen(false)} className="block py-2 text-sm text-gray-400 hover:text-white text-indigo-400">Admin Panel</Link>
+              
+              <div className="border-t border-white/5 pt-2 mt-2" />
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  handleSignOut();
+                }}
+                className="w-full flex items-center gap-2 py-2 text-sm text-red-400 hover:text-red-300 font-semibold text-left cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
             </>
           )}
         </div>
@@ -153,4 +269,5 @@ export const Navbar: React.FC = () => {
     </header>
   );
 };
+
 export default Navbar;
