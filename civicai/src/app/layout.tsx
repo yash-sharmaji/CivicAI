@@ -1,0 +1,26 @@
+import type { Metadata } from "next";
+import "./globals.css";
+import ClientLayout from "@/components/ClientLayout";
+
+export const metadata: Metadata = {
+  title: "CivicAI - AI-Powered Hyperlocal Community Platform",
+  description: "See it. Snap it. Solve it. Report local infrastructure issues, verify status, and coordinate resolutions with AI diagnostics.",
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="en"
+      className="h-full antialiased"
+    >
+      <body className="min-h-full flex flex-col bg-[#030303]">
+        <ClientLayout>{children}</ClientLayout>
+      </body>
+    </html>
+  );
+}
