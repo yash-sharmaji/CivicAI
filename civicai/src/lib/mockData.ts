@@ -88,8 +88,8 @@ export interface LeaderboardEntry {
 // API UTILITIES
 // ==========================================
 
-const API_BASE = 'http://localhost:5000/api';
-
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 const isServer = typeof window === 'undefined';
 
 export function getAuthToken(): string | null {
@@ -142,7 +142,7 @@ export async function loginUser(email: string, password: string): Promise<any> {
     method: 'POST',
     body: JSON.stringify({ email, password })
   });
-  
+
   if (data?.session?.access_token) {
     setAuthToken(data.session.access_token);
   }
@@ -301,7 +301,7 @@ export async function getStoredUser(): Promise<UserStats | null> {
   try {
     const data = await fetchAPI('/auth/profile');
     const u = data.user;
-    
+
     if (!u) return null;
 
     const stats: UserStats = {
