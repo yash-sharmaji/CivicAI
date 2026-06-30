@@ -94,13 +94,19 @@ const isServer = typeof window === 'undefined';
 
 export function getAuthToken(): string | null {
   if (isServer) return null;
-  return localStorage.getItem('civicai_token');
+  const token = localStorage.getItem('civicai_token');
+  if (!token) return null;
+  if (token.startsWith('"') && token.endsWith('"')) {
+    return token.slice(1, -1);
+  }
+  return token;
 }
 
 export function setAuthToken(token: string | null) {
   if (isServer) return;
   if (token) {
-    localStorage.setItem('civicai_token', token);
+    const cleanToken = token.startsWith('"') && token.endsWith('"') ? token.slice(1, -1) : token;
+    localStorage.setItem('civicai_token', cleanToken);
   } else {
     localStorage.removeItem('civicai_token');
   }
